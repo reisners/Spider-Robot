@@ -87,16 +87,11 @@ void cmd_unrecognized(SerialCommands* sender, const char* cmd)
 	sender->GetSerial()->println("]");
 }
 
-void cmd_polar(SerialCommands* sender)
-{
-	int leg = next_int(sender, "ERROR leg missing");
-	float alpha = next_float(sender, "ERROR alpha missing");
-	float beta = next_float(sender, "ERROR beta missing");
-	float gamma = next_float(sender, "ERROR gamma missing");
+void cmd_angle_corrections(SerialCommands* sender);
+SerialCommand cmd_angle_corrections_("a", cmd_angle_corrections);
 
-  polar_to_servo(leg, alpha, beta, gamma);
-}
-SerialCommand cmd_polar_("p", cmd_polar);
+void cmd_cartesian(SerialCommands* sender);
+SerialCommand cmd_cartesian_("c", cmd_cartesian);
 
 void cmd_stand(SerialCommands* sender) {
   stand();
@@ -223,7 +218,8 @@ void setup()
   Serial.println("Servos initialized");
   
 	serial_commands_.SetDefaultHandler(cmd_unrecognized);
-	serial_commands_.AddCommand(&cmd_polar_);
+	serial_commands_.AddCommand(&cmd_angle_corrections_);
+	serial_commands_.AddCommand(&cmd_cartesian_);
   serial_commands_.AddCommand(&cmd_forward_);
   serial_commands_.AddCommand(&cmd_back_);
   serial_commands_.AddCommand(&cmd_left_);
@@ -235,6 +231,7 @@ void setup()
   Serial.println("CLI initialized");
 
   Serial.println("Robot initialization Complete");
+  sit();
 }
 
 
@@ -267,6 +264,54 @@ void servo_detach(void)
 void loop()
 {
   serial_commands_.ReadSerial();
+}
+
+void cmd_angle_corrections(SerialCommands* sender)
+{
+	int leg = next_int(sender, "ERROR leg missing");
+  int alpha_correction = next_float(sender, "ERROR alpha correction missing");
+	float beta_correction = next_float(sender, "ERROR beta correction missing");
+	float gamma_correction = next_float(sender, "ERROR gamma correction missing");
+
+  servo_angle_correction[leg][0] = alpha_correction;
+  servo_angle_correction[leg][1] = beta_correction;
+  servo_angle_correction[leg][2] = gamma_correction;
+
+  sender->GetSerial()->println("angle corrections now:");
+  for (int l = 0; l < 4; l++) {
+    sender->GetSerial()->print("  leg ");
+    sender->GetSerial()->print(l);
+    for (int k = 0; k < 3; k++) {
+      sender->GetSerial()->print(" ");
+      sender->GetSerial()->print(servo_angle_correction[l][k]);
+    }
+    sender->GetSerial()->println();
+  }
+}
+
+/*
+  - cartesian
+  - blocking function
+   ---------------------------------------------------------------------------*/
+void cmd_cartesian(SerialCommands* sender)
+{
+	int leg = next_int(sender, "ERROR leg missing");
+	float deltax = next_float(sender, "ERROR deltax missing");
+	float deltay = next_float(sender, "ERROR deltay missing");
+	float deltaz = next_float(sender, "ERROR deltaz missing");
+
+  move_speed = 1;
+  set_site(leg, x_default + deltax, y_start + deltay, z_default + deltaz);
+  wait_all_reach();
+  sender->GetSerial()->print("leg ");
+  sender->GetSerial()->print(leg);
+  sender->GetSerial()->print(" moved to (");
+  sender->GetSerial()->print(deltax);
+  sender->GetSerial()->print(",");
+  sender->GetSerial()->print(deltay);
+  sender->GetSerial()->print(",");
+  sender->GetSerial()->print(deltaz);
+  sender->GetSerial()->println(")");
 }
 
 /*
