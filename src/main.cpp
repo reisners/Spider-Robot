@@ -27,6 +27,7 @@
 #include <Arduino.h>
 #include <Servo.h>    //to define and control servos
 #include <FlexiTimer2.h>//to set a timer to manage all servos
+#include <SoftwareSerial.h>
 #include <SerialCommands.h>
 
 /* ---------------------------------------------------------------------------*/
@@ -47,8 +48,9 @@ void cartesian_to_polar(volatile float &alpha, volatile float &beta, volatile fl
 void polar_to_servo(int leg, float alpha, float beta, float gamma);
 
 /* SerialCommands */
+SoftwareSerial BTserial(A0, A1);
 char serial_command_buffer_[32];
-SerialCommands serial_commands_(&Serial, serial_command_buffer_, sizeof(serial_command_buffer_), "\r\n", " ");
+SerialCommands serial_commands_(&BTserial, serial_command_buffer_, sizeof(serial_command_buffer_), "\r\n", " ");
 
 int next_int(SerialCommands* sender, const int defaultValue) {
 	char* str = sender->Next();
@@ -189,6 +191,7 @@ const float turn_x1 = (temp_a - length_side) / 2;
 const float turn_y1 = y_start + y_step / 2;
 const float turn_x0 = turn_x1 - temp_b * cos(temp_alpha);
 const float turn_y0 = temp_b * sin(temp_alpha) - turn_y1 - length_side;
+
 /*
   - setup function
    ---------------------------------------------------------------------------*/
@@ -197,6 +200,7 @@ void setup()
   //start serial for debug
   Serial.begin(115200);
   Serial.println("Robot starts initialization");
+  BTserial.println("Robot starts initialization");
   //initialize default parameter
   set_site(0, x_default - x_offset, y_start + y_step, z_boot);
   set_site(1, x_default - x_offset, y_start + y_step, z_boot);
@@ -213,9 +217,11 @@ void setup()
   FlexiTimer2::set(20, servo_service);
   FlexiTimer2::start();
   Serial.println("Servo service started");
+  BTserial.println("Servo service started");
   //initialize servos
   servo_attach();
   Serial.println("Servos initialized");
+  BTserial.println("Servos initialized");
   
 	serial_commands_.SetDefaultHandler(cmd_unrecognized);
 	serial_commands_.AddCommand(&cmd_angle_corrections_);
@@ -229,8 +235,10 @@ void setup()
   serial_commands_.AddCommand(&cmd_wave_);
   serial_commands_.AddCommand(&cmd_shake_);
   Serial.println("CLI initialized");
+  BTserial.println("CLI initialized");
 
   Serial.println("Robot initialization Complete");
+  BTserial.println("Robot initialization Complete");
   sit();
 }
 
