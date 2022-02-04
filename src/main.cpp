@@ -200,6 +200,7 @@ void setup()
   //start serial for debug
   Serial.begin(115200);
   Serial.println("Robot starts initialization");
+  BTserial.begin(9600);
   BTserial.println("Robot starts initialization");
   //initialize default parameter
   set_site(0, x_default - x_offset, y_start + y_step, z_boot);
