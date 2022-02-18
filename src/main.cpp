@@ -27,8 +27,8 @@
 #include <Arduino.h>
 #include <Servo.h>    //to define and control servos
 #include <FlexiTimer2.h>//to set a timer to manage all servos
-#include <SoftwareSerial.h>
 #include <SerialCommands.h>
+#include <NeoSWSerial.h>
 
 /* ---------------------------------------------------------------------------*/
 void set_site(int leg, float x, float y, float z);
@@ -48,7 +48,7 @@ void cartesian_to_polar(volatile float &alpha, volatile float &beta, volatile fl
 void polar_to_servo(int leg, float alpha, float beta, float gamma);
 
 /* SerialCommands */
-SoftwareSerial BTserial(A0, A1);
+NeoSWSerial BTserial(A0, A1);
 char serial_command_buffer_[32];
 SerialCommands serial_commands_(&BTserial, serial_command_buffer_, sizeof(serial_command_buffer_), "\r\n", " ");
 
@@ -192,6 +192,11 @@ const float turn_y1 = y_start + y_step / 2;
 const float turn_x0 = turn_x1 - temp_b * cos(temp_alpha);
 const float turn_y0 = temp_b * sin(temp_alpha) - turn_y1 - length_side;
 
+void output(String message) {
+  Serial.println(message);
+  BTserial.println(message);
+}
+
 /*
   - setup function
    ---------------------------------------------------------------------------*/
@@ -199,9 +204,8 @@ void setup()
 {
   //start serial for debug
   Serial.begin(115200);
-  Serial.println("Robot starts initialization");
   BTserial.begin(9600);
-  BTserial.println("Robot starts initialization");
+  output("Robot starts initialization");
   //initialize default parameter
   set_site(0, x_default - x_offset, y_start + y_step, z_boot);
   set_site(1, x_default - x_offset, y_start + y_step, z_boot);
@@ -217,12 +221,10 @@ void setup()
   //start servo service
   FlexiTimer2::set(20, servo_service);
   FlexiTimer2::start();
-  Serial.println("Servo service started");
-  BTserial.println("Servo service started");
+  output("Servo service started");
   //initialize servos
   servo_attach();
-  Serial.println("Servos initialized");
-  BTserial.println("Servos initialized");
+  output("Servos initialized");
   
 	serial_commands_.SetDefaultHandler(cmd_unrecognized);
 	serial_commands_.AddCommand(&cmd_angle_corrections_);
